@@ -6,35 +6,49 @@ public class PlayerLogic : MonoBehaviour
 {
     private Vector2 startTouchPosition;
     private Vector2 endTouchPosition;
-    private bool swipeDetected;
-    Vector3 currentVelocity;
-    Vector3 targetPosition;
-    public float smoothSpeed = 5f; // Adjust for smoother movement
+    private Vector3 targetPosition;
+
+    public float smoothSpeed = 5f; // Smoothing speed for swipe transition
+    public float minSwipeDistance = 50f; // Minimum swipe threshold
+    public float forwardSpeed = 5f; // Constant forward movement
+
+    void Start()
+    {
+        targetPosition = transform.position;
+    }
+
     void Update()
+    {
+        HandleTouchInput();
+        SmoothSwipeMove();
+        MoveForward();
+    }
+
+    void HandleTouchInput()
     {
         if (Input.touchCount > 0)
         {
             Touch touch = Input.GetTouch(0);
 
-            if (touch.phase == TouchPhase.Began)
-                startTouchPosition = touch.position;
-
-            if (touch.phase == TouchPhase.Ended)
+            switch (touch.phase)
             {
-                endTouchPosition = touch.position;
-                DetectSwipeDirection();
+                case TouchPhase.Began:
+                    startTouchPosition = touch.position;
+                    break;
+
+                case TouchPhase.Ended:
+                    endTouchPosition = touch.position;
+                    DetectSwipeDirection();
+                    break;
             }
-
         }
-        transform.position = Vector3.Lerp(transform.position, targetPosition, smoothSpeed * Time.deltaTime);
-
     }
 
     void DetectSwipeDirection()
     {
         Vector2 swipeDelta = endTouchPosition - startTouchPosition;
 
-        if (swipeDelta.magnitude < 50) // Minimum swipe distance threshold
+        if (swipeDelta.magnitude < minSwipeDistance)
             return;
 
         if (Mathf.Abs(swipeDelta.x) > Mathf.Abs(swipeDelta.y))
@@ -42,26 +56,44 @@ public class PlayerLogic : MonoBehaviour
             if (swipeDelta.x > 0)
             {
                 Debug.Log("Swiped Right");
-                OnSwipe(new Vector3(2, 0, 0));
+                Move(Vector3.right * 2f);
             }
             else
             {
                 Debug.Log("Swiped Left");
-                OnSwipe(new Vector3(-2, 0, 0));
+                Move(Vector3.left * 2f);
             }
-
         }
         else
         {
             if (swipeDelta.y > 0)
+            {
                 Debug.Log("Swiped Up");
+                Move(Vector3.up * 2f);
+            }
             else
+            {
                 Debug.Log("Swiped Down");
+                Move(Vector3.down * 2f);
+            }
         }
     }
 
-    void OnSwipe(Vector3 pos)
+    void Move(Vector3 direction)
     {
-        targetPosition = transform.position + pos;
+        targetPosition += direction;
+    }
+
+    void SmoothSwipeMove()
+    {
+        // Only update X and Y, let Z be handled by MoveForward
+        Vector3 current = transform.position;
+        Vector3 desired = new Vector3(targetPosition.x, targetPosition.y, current.z);
+        transform.position = Vector3.Lerp(current, desired, smoothSpeed * Time.deltaTime);
+    }
+
+    void MoveForward()
+    {
+        transform.position += new Vector3(0, 0, forwardSpeed) * Time.deltaTime;
     }
 }
